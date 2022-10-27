@@ -132,15 +132,16 @@ def publish_discovery_messages(mqttClient):
     gridPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "gridPower", "Grid Power", "W")
     battPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "battPower", "Battery Power", "W")
 
-    pv_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "pv", "PV Energy", "kWh")
+    pv_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "pv", "PV Energy", "kWh",
+                                                       measurement=False)
     export_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "export", "Export Energy",
-                                                           "kWh")
+                                                           "kWh", measurement=False)
     import_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "import", "Import Energy",
-                                                           "kWh")
+                                                           "kWh", measurement=False)
     discharge_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "discharge",
-                                                              "Discharge Energy", "kWh")
+                                                              "Discharge Energy", "kWh", measurement=False)
     charge_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "charge", "Charge Energy",
-                                                           "kWh")
+                                                           "kWh", measurement=False)
 
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/soc/config", mqttClient, soc_config_message)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/load/config", mqttClient, load_config_message)
@@ -155,7 +156,9 @@ def publish_discovery_messages(mqttClient):
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/charge/config", mqttClient, charge_energy_config_message)
 
 
-def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name, unit_of_measurement):
+def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name, unit_of_measurement,
+                            measurement=True):
+    state_class = "measurement" if measurement else "total_increasing"
     template = f"""
     {{
         "unique_id": "sensor.{group_name}-{entity_name}",
@@ -163,10 +166,14 @@ def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name
         "state_topic": "homeassistant/{group_name}/{entity_name}",
         "unit_of_measurement": "{unit_of_measurement}",
         "device_class": "{device_class}",
-        "state_class": "measurement"
+        "state_class": "{state_class}"
     }}
     """
-    print(template)
+
+    if config.DEBUG_LOGGING:
+        print("Generated MQTT config message:")
+        print(template)
+
     return template
 
 
@@ -210,6 +217,7 @@ def main():
             power_data = get_power_data()
             energy_data = get_energy_data()
             publish_data_to_home_assistant(mqttClient, power_data, energy_data)
+            print("Published data to Home Assistant")
             time.sleep(config.API_REFRESH_TIMEOUT)
 
 

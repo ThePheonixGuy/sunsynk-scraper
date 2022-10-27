@@ -29,7 +29,8 @@ def connect_client():
 def publish(topic, client, msg):
     result = client.publish(topic, msg, qos=2)
     status = result[0]
-    if status == 0 and config.DEBUG_LOGGING:
-        print(f"Sent message `{msg}` to topic `{topic}`")
-    else:
-        print(f"Failed to send message `{msg}` to topic {topic}")
+    if config.DEBUG_LOGGING:
+        if status == 0 and config.DEBUG_LOGGING:
+            print(f"Sent message `{msg}` to topic `{topic}`")
+        else:
+            print(f"Failed to send message `{msg}` to topic {topic}")
