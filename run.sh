@@ -2,8 +2,8 @@
 
 echo "Starting..."
 
-python3 -m pip install requirements.txt
+python3 -m pip install /data/requirements.txt
 
 echo "Done installation of requirements, running..."
 
-python3 main.py
+python3 /data/main.py

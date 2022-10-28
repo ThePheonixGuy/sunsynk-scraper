@@ -8,8 +8,8 @@ RUN \
 
 WORKDIR /data
 
-COPY . ./
+COPY . ./data/
 
-RUN chmod a+x /run.sh
+RUN chmod a+x /data/run.sh
 
-CMD [ "/run.sh" ]
+CMD [ "/data/run.sh" ]
