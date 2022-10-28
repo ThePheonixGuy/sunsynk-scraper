@@ -12,6 +12,7 @@ def connect_client():
             print("Connected to MQTT Broker!")
         else:
             print("Failed to connect, return code %d\n", rc)
+            raise Exception("Failed to connect to MQTT broker")
 
     def on_publish_callback(client, userdata, mid):
         if config.DEBUG_LOGGING:

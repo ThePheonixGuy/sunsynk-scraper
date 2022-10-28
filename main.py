@@ -207,7 +207,10 @@ def setup_mqtt():
 def main():
     delete = False
     login_and_setup_plant()
-    mqttClient = setup_mqtt()
+    try:
+        mqttClient = setup_mqtt()
+    except:
+        print("Failed to connect to MQTT broker")
     if delete:
         delete_sensors(mqttClient)
     else:
