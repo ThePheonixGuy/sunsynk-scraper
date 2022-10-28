@@ -2,5 +2,5 @@
 
 echo "Hello world!"
 
-pip install requirements.txt
+pip3 install requirements.txt
 python3 main.py
