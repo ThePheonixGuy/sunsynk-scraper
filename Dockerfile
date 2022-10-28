@@ -8,13 +8,8 @@ RUN \
 
 WORKDIR /data
 
-
-
-# Copy data for add-on
-COPY run.sh /
-
-
 COPY ./* /data/
+
 RUN chmod a+x ./run.sh
 
-CMD [ "./main.py" ]
+CMD [ "./run.sh" ]
