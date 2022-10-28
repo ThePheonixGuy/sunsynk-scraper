@@ -17,4 +17,4 @@ COPY run.sh /
 COPY ./* /data/
 RUN chmod a+x ./run.sh
 
-CMD [ "./run.sh" ]
+CMD [ "./main.py" ]
