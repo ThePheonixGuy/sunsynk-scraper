@@ -14,6 +14,6 @@ WORKDIR /data
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-COPY . .
+COPY ./* .
 
 CMD [ "/run.sh" ]
