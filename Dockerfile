@@ -6,10 +6,10 @@ RUN \
   apk add --no-cache \
     python3
 
-WORKDIR /data
+WORKDIR /app
 
-COPY . ./data/
+COPY . ./
 
-RUN chmod a+x /data/run.sh
+RUN chmod a+x /app/run.sh
 
-CMD [ "/data/run.sh" ]
+CMD [ "/app/run.sh" ]
