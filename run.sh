@@ -1,6 +1,9 @@
 #!/usr/bin/with-contenv bashio
 
-echo "Hello world!"
+echo "Starting..."
 
-pip3 install requirements.txt
+python3 -m pip install requirements.txt
+
+echo "Done installation of requirements, running..."
+
 python3 main.py
