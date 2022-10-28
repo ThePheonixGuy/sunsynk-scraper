@@ -6,14 +6,14 @@ RUN \
   apk add --no-cache \
     python3
 
-# Python 3 HTTP Server serves the current working dir
-# So let's set it to our add-on persistent data directory.
+RUN pip3 install --no-cache-dir --disable-pip-version-check paho-mqtt~=1.6.1 requests~=2.28.1
+
 WORKDIR /data
 
-COPY ./* /data/
+COPY . ./
 
 # Copy data for add-on
 COPY run.sh /
 RUN chmod a+x /run.sh
 
-CMD [ "/run.sh" ]
+CMD [ "./main.py" ]
