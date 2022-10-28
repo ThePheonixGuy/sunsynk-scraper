@@ -1,0 +1,14 @@
+name: "Sunsynk Scraper"
+description: "Scrapes the SunSynk / inteless API for data on your solar setup!"
+version: "0.0.1"
+slug: "sunsynk_scrapper"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+startup: before
+ports:
+  8000/tcp: 8000
