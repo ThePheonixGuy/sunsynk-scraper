@@ -10,10 +10,10 @@ RUN \
 # So let's set it to our add-on persistent data directory.
 WORKDIR /data
 
+COPY ./* /data/
+
 # Copy data for add-on
 COPY run.sh /
 RUN chmod a+x /run.sh
-
-COPY ./* .
 
 CMD [ "/run.sh" ]
