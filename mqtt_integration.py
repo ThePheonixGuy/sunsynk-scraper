@@ -34,8 +34,8 @@ async def connect_client():
     client.username_pw_set(username, credentials.mqtt_password)
     client.on_connect = on_connect
     client.on_publish = on_publish_callback
-
-    await client.connect_async(host, port)
+    client.connect_async(host, port)
+    client.loop_start()
 
     retry = 10
     while retry and not client.is_connected():
@@ -46,7 +46,6 @@ async def connect_client():
     if not retry:
         raise ConnectionError(f"MQTT: Could not connect to {username}@{host}:{port}")
 
-    client.loop_start()
     return client
 
 
