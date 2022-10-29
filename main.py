@@ -224,8 +224,8 @@ def main():
                 publish_data_to_home_assistant(mqttClient, power_data, energy_data)
                 print("Published data to Home Assistant")
                 time.sleep(config.API_REFRESH_TIMEOUT)
-    except:
-        print("Failed to connect to MQTT broker")
+    except Exception as e:
+        print(f"Failed to connect to MQTT broker with reason {str(e)}")
 
 
 if __name__ == "__main__":
