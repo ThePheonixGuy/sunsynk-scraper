@@ -1,6 +1,6 @@
 import random
 
-import config
+import configuration
 import credentials
 from paho.mqtt import client as mqtt_client
 

@@ -3,7 +3,7 @@ import time
 
 import requests
 
-import config
+import configuration as config
 import credentials
 import endpoints
 import mqtt_integration as mqtt

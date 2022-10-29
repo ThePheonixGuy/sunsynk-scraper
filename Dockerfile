@@ -1,18 +1,7 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Install requirements for add-on
-#RUN \
-#  apk add --no-cache \
-#    python3
-#
-#RUN \
-#  apk add --no-cache \
-#    python3-pip
-
-RUN apt-get update && apt-get install -y \
-     python3=3.9.2 \
-     python3-pip
+RUN pip3 install --no-cache-dir --disable-pip-version-check paho-mqtt~=1.6.1 requests~=2.28.1
 
 WORKDIR /app
 
