@@ -1,3 +1,4 @@
+import asyncio
 import random
 import time
 
@@ -22,7 +23,7 @@ def on_publish_callback(client, userdata, mid):
         print(f"Published: {mid}")
 
 
-def connect_client():
+async def connect_client():
     username = credentials.mqtt_username
     host = credentials.mqtt_broker
     port = credentials.mqtt_port
@@ -34,11 +35,12 @@ def connect_client():
     client.on_connect = on_connect
     client.on_publish = on_publish_callback
 
-    client.connect(host, port)
+    await client.connect_async(host, port)
 
     retry = 10
     while retry and not client.is_connected():
-        time.sleep(0.5)
+        print(f'MQTT: Waiting for connection... ({retry})')
+        await asyncio.sleep(1)
         retry -= 1
 
     if not retry:
