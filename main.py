@@ -205,23 +205,27 @@ def setup_mqtt():
 
 
 def main():
+    print("Startup")
     delete = False
     login_and_setup_plant()
+    print("Plant retrieval successful")
     try:
         mqttClient = setup_mqtt()
+        print("MQTT setup successful")
+        if delete:
+            delete_sensors(mqttClient)
+        else:
+            print("Publishing MQTT config messages")
+            publish_discovery_messages(mqttClient)
+            subscribeToSetTopic(mqttClient)
+            while True:
+                power_data = get_power_data()
+                energy_data = get_energy_data()
+                publish_data_to_home_assistant(mqttClient, power_data, energy_data)
+                print("Published data to Home Assistant")
+                time.sleep(config.API_REFRESH_TIMEOUT)
     except:
         print("Failed to connect to MQTT broker")
-    if delete:
-        delete_sensors(mqttClient)
-    else:
-        publish_discovery_messages(mqttClient)
-        subscribeToSetTopic(mqttClient)
-        while True:
-            power_data = get_power_data()
-            energy_data = get_energy_data()
-            publish_data_to_home_assistant(mqttClient, power_data, energy_data)
-            print("Published data to Home Assistant")
-            time.sleep(config.API_REFRESH_TIMEOUT)
 
 
 if __name__ == "__main__":
