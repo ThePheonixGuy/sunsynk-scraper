@@ -27,7 +27,7 @@ def connect_client():
     host = credentials.mqtt_broker
     port = credentials.mqtt_port
 
-    print('MQTT: Connecting to %s@%s:%s', username, host, port)
+    print('MQTT: Connecting to:', username, host, port, credentials.mqtt_password)
 
     client = mqtt_client.Client(client_id)
     client.username_pw_set(username, credentials.mqtt_password)
