@@ -9,3 +9,5 @@ arch:
   - armhf
   - armv7
   - i386
+services:
+  - mqtt:need
