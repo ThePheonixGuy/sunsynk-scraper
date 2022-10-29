@@ -1,9 +1,10 @@
+import asyncio
 import datetime
 import time
 
 import requests
 
-import config
+import configuration as config
 import credentials
 import endpoints
 import mqtt_integration as mqtt
@@ -198,28 +199,36 @@ def login_and_setup_plant():
     credentials.my_plant_id = get_plant_id()
 
 
-def setup_mqtt():
-    mqttClient = mqtt.connect_client()
-    mqttClient.loop_start()
+async def setup_mqtt():
+    mqttClient = await mqtt.connect_client()
     return mqttClient
 
 
-def main():
+async def main():
+    print("Startup")
     delete = False
     login_and_setup_plant()
-    mqttClient = setup_mqtt()
-    if delete:
-        delete_sensors(mqttClient)
-    else:
-        publish_discovery_messages(mqttClient)
-        subscribeToSetTopic(mqttClient)
-        while True:
-            power_data = get_power_data()
-            energy_data = get_energy_data()
-            publish_data_to_home_assistant(mqttClient, power_data, energy_data)
-            print("Published data to Home Assistant")
-            time.sleep(config.API_REFRESH_TIMEOUT)
+    print("Plant retrieval successful")
+    try:
+        mqttClient = await setup_mqtt()
+        print("MQTT setup successful")
+        if delete:
+            delete_sensors(mqttClient)
+        else:
+            print("Publishing MQTT config messages")
+            publish_discovery_messages(mqttClient)
+            subscribeToSetTopic(mqttClient)
+            while True:
+                power_data = get_power_data()
+                energy_data = get_energy_data()
+                publish_data_to_home_assistant(mqttClient, power_data, energy_data)
+                print("Published data to Home Assistant")
+                await asyncio.sleep(config.API_REFRESH_TIMEOUT)
+    except Exception as e:
+        print(f"Failed to connect to MQTT broker with reason {str(e)}")
 
 
 if __name__ == "__main__":
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close()
