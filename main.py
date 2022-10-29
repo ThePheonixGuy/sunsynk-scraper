@@ -201,7 +201,6 @@ def login_and_setup_plant():
 
 async def setup_mqtt():
     mqttClient = await mqtt.connect_client()
-    mqttClient.loop_start()
     return mqttClient
 
 
@@ -230,4 +229,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    await main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    loop.close()
