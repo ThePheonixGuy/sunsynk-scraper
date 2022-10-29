@@ -1,37 +1,58 @@
 import random
+import time
+
+from paho.mqtt import client as mqtt_client
 
 import configuration
 import credentials
-from paho.mqtt import client as mqtt_client
 
 client_id = f'sunsynk-scraper-mqtt-{random.randint(0, 1000)}'
 
-def connect_client():
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("Connected to MQTT Broker!")
-        else:
-            print("Failed to connect, return code %d\n", rc)
-            raise Exception("Failed to connect to MQTT broker")
 
-    def on_publish_callback(client, userdata, mid):
-        if config.DEBUG_LOGGING:
-            print(f"Published: {mid}")
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to MQTT Broker!")
+    else:
+        print("Failed to connect, return code %d\n", rc)
+        raise Exception("Failed to connect to MQTT broker")
+
+
+def on_publish_callback(client, userdata, mid):
+    if configuration.DEBUG_LOGGING:
+        print(f"Published: {mid}")
+
+
+def connect_client():
+    username = credentials.mqtt_username
+    host = credentials.mqtt_broker
+    port = credentials.mqtt_port
+
+    print('MQTT: Connecting to %s@%s:%s', username, host, port)
 
     client = mqtt_client.Client(client_id)
-    client.username_pw_set(credentials.mqtt_username, credentials.mqtt_password)
+    client.username_pw_set(username, credentials.mqtt_password)
     client.on_connect = on_connect
-    client.connect(credentials.mqtt_broker, credentials.mqtt_port)
     client.on_publish = on_publish_callback
 
+    client.connect(host, port)
+
+    retry = 10
+    while retry and not client.is_connected():
+        time.sleep(0.5)
+        retry -= 1
+
+    if not retry:
+        raise ConnectionError(f"MQTT: Could not connect to {username}@{host}:{port}")
+
+    client.loop_start()
     return client
 
 
 def publish(topic, client, msg):
     result = client.publish(topic, msg, qos=2)
     status = result[0]
-    if config.DEBUG_LOGGING:
-        if status == 0 and config.DEBUG_LOGGING:
+    if configuration.DEBUG_LOGGING:
+        if status == 0 and configuration.DEBUG_LOGGING:
             print(f"Sent message `{msg}` to topic `{topic}`")
         else:
             print(f"Failed to send message `{msg}` to topic {topic}")
