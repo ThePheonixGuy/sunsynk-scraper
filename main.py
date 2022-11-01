@@ -224,7 +224,7 @@ def publish_discovery_messages(mqttClient):
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pvPower/config", mqttClient, pvPower_config_message, qos=2 , retain=True)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/gridPower/config", mqttClient, gridPower_config_message, qos=2 , retain=True)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battPower/config", mqttClient, battPower_config_message, qos=2 , retain=True)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battCharging/config", mqttClient, battCharging_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/binary_sensor/sunsynk-scraper/battCharging/config", mqttClient, battCharging_config_message, qos=2 , retain=True)
 
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pv/config", mqttClient, pv_energy_config_message, qos=2, retain=True)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/export/config", mqttClient, export_energy_config_message, qos=2, retain=True)
@@ -240,7 +240,7 @@ def publish_data_to_home_assistant(client, powerData, energyData):
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/pvPower/state", client, powerData['pvPower'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/gridPower/state", client, powerData['gridOrMeterPower'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/battPower/state", client, battPower)
-    mqtt.publish("homeassistant/sensor/sunsynk-scraper/battCharging/state", client, is_charging)
+    mqtt.publish("homeassistant/binary_sensor/sunsynk-scraper/battCharging/state", client, is_charging)
 
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/pv/state", client, energyData['pv'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/export/state", client, energyData['export'])
