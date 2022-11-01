@@ -219,18 +219,18 @@ def publish_discovery_messages(mqttClient):
     charge_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "charge", "Charge Energy",
                                                            "kWh", measurement=False)
 
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/soc/config", mqttClient, soc_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/load/config", mqttClient, load_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pvPower/config", mqttClient, pvPower_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/gridPower/config", mqttClient, gridPower_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battPower/config", mqttClient, battPower_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battCharging/config", mqttClient, battCharging_config_message)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/soc/config", mqttClient, soc_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/load/config", mqttClient, load_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pvPower/config", mqttClient, pvPower_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/gridPower/config", mqttClient, gridPower_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battPower/config", mqttClient, battPower_config_message, qos=2 , retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battCharging/config", mqttClient, battCharging_config_message, qos=2 , retain=True)
 
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pv/config", mqttClient, pv_energy_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/export/config", mqttClient, export_energy_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/import/config", mqttClient, import_energy_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/discharge/config", mqttClient, discharge_energy_config_message)
-    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/charge/config", mqttClient, charge_energy_config_message)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pv/config", mqttClient, pv_energy_config_message, qos=2, retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/export/config", mqttClient, export_energy_config_message, qos=2, retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/import/config", mqttClient, import_energy_config_message, qos=2, retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/discharge/config", mqttClient, discharge_energy_config_message, qos=2, retain=True)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/charge/config", mqttClient, charge_energy_config_message, qos=2, retain=True)
 
 def publish_data_to_home_assistant(client, powerData, energyData):
     is_charging = "ON" if powerData['toBat'] else "ON"

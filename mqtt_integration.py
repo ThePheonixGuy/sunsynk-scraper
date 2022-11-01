@@ -49,8 +49,8 @@ async def connect_client():
     return client
 
 
-def publish(topic, client, msg):
-    result = client.publish(topic, msg, qos=2)
+def publish(topic, client, msg, qos = 0, retain = False):
+    result = client.publish(topic, msg, qos=qos, retain=retain)
     status = result[0]
     if configuration.DEBUG_LOGGING:
         if status == 0 and configuration.DEBUG_LOGGING:
