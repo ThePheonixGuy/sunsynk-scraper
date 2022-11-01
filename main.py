@@ -287,7 +287,7 @@ async def main():
             delete_sensors(mqttClient)
         else:
             print("Publishing MQTT config messages")
-            # publish_discovery_messages(mqttClient)
+            publish_discovery_messages(mqttClient)
             subscribeToSetTopic(mqttClient)
             while True:
                 power_data = get_power_data()
