@@ -187,8 +187,7 @@ def get_binary_sensor_mqtt_config_message(device_class, group_name, entity_name,
         "unique_id": "binary_sensor.{group_name}-{entity_name}",
         "name": "Sunsynk {friendly_name}",
         "state_topic": "homeassistant/binary_sensor/{group_name}/{entity_name}/state",
-        "device_class": "{device_class}",
-        "payload_on": "on"
+        "device_class": "{device_class}"
     }}
     """
 
