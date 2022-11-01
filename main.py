@@ -112,18 +112,91 @@ def find_data_stream_for_label(label, energy_data):
 
 # function that publishes all the powerData values to home assistant over mqtt
 
-def publish_data_to_home_assistant(client, powerData, energyData):
-    mqtt.publish("homeassistant/sunsynk-scraper/soc", client, powerData['soc'])
-    mqtt.publish("homeassistant/sunsynk-scraper/load", client, powerData['loadOrEpsPower'])
-    mqtt.publish("homeassistant/sunsynk-scraper/pvPower", client, powerData['pvPower'])
-    mqtt.publish("homeassistant/sunsynk-scraper/gridPower", client, powerData['gridOrMeterPower'])
-    mqtt.publish("homeassistant/sunsynk-scraper/battPower", client, powerData['battPower'])
 
-    mqtt.publish("homeassistant/sunsynk-scraper/pv", client, energyData['pv'])
-    mqtt.publish("homeassistant/sunsynk-scraper/export", client, energyData['export'])
-    mqtt.publish("homeassistant/sunsynk-scraper/import", client, energyData['import'])
-    mqtt.publish("homeassistant/sunsynk-scraper/discharge", client, energyData['discharge'])
-    mqtt.publish("homeassistant/sunsynk-scraper/charge", client, energyData['charge'])
+class Device():
+    device: str
+
+    """A Home Assistant Device, used to group entities."""
+
+    identifiers: []
+    connections: []
+    configuration_url: str
+    manufacturer: str
+    model: str
+    name: str
+    suggested_area: str
+    sw_version: str
+    via_device: str
+
+    def __attrs_post_init__(self) -> None:
+        """Init the class."""
+        assert self.identifiers  # Must at least have 1 identifier
+
+    @property
+    def id(self) -> str:
+        """The device identifier."""
+        return str(self.identifiers[0])
+
+class Entity():
+    entity_type: str
+    entity_name = ""
+    group: str
+    topic_base:str # f"homeassistant/{entity_type}/{group}/{entity_name}"
+    config_topic:str # topic_base + "/config"
+
+    device: Device
+
+    unique_id:str
+    name:str
+    state_topic:str # = topic_base + "/state"
+    unit_of_measurement:str
+    icon:str
+    device_class:str
+    state:str
+
+class SensorEntity(Entity):
+    state_topic = ""
+
+    def __init__(self, name, unit_of_measurement, icon, state_topic):
+        pass
+
+def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name, unit_of_measurement,
+                            measurement=True):
+    state_class = "measurement" if measurement else "total_increasing"
+    template = f"""
+    {{
+        "unique_id": "sensor.{group_name}-{entity_name}",
+        "name": "Sunsynk {friendly_name}",
+        "state_topic": "homeassistant/sensor/{group_name}/{entity_name}/state",
+        "unit_of_measurement": "{unit_of_measurement}",
+        "device_class": "{device_class}",
+        "state_class": "{state_class}"
+    }}
+    """
+
+    if config.DEBUG_LOGGING:
+        print("Generated MQTT config message:")
+        print(template)
+
+    return template
+
+def get_binary_sensor_mqtt_config_message(device_class, group_name, entity_name, friendly_name):
+    state_class = "measurement"
+    template = f"""
+    {{
+        "unique_id": "binary_sensor.{group_name}-{entity_name}",
+        "name": "Sunsynk {friendly_name}",
+        "state_topic": "homeassistant/binary_sensor/{group_name}/{entity_name}/state",
+        "device_class": "{device_class}",
+        "payload_on": "on"
+    }}
+    """
+
+    if config.DEBUG_LOGGING:
+        print("Generated MQTT config message:")
+        print(template)
+
+    return template
 
 
 def publish_discovery_messages(mqttClient):
@@ -132,6 +205,9 @@ def publish_discovery_messages(mqttClient):
     pvPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "pvPower", "PV Power", "W")
     gridPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "gridPower", "Grid Power", "W")
     battPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "battPower", "Battery Power", "W")
+
+    battCharging_config_message = get_binary_sensor_mqtt_config_message("power", "sunsynk-scraper", "battCharging", "Battery Charging Status")
+
 
     pv_energy_config_message = get_mqtt_config_message("energy", "sunsynk-scraper", "pv", "PV Energy", "kWh",
                                                        measurement=False)
@@ -149,6 +225,7 @@ def publish_discovery_messages(mqttClient):
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pvPower/config", mqttClient, pvPower_config_message)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/gridPower/config", mqttClient, gridPower_config_message)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battPower/config", mqttClient, battPower_config_message)
+    mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/battCharging/config", mqttClient, battCharging_config_message)
 
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/pv/config", mqttClient, pv_energy_config_message)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/export/config", mqttClient, export_energy_config_message)
@@ -156,27 +233,21 @@ def publish_discovery_messages(mqttClient):
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/discharge/config", mqttClient, discharge_energy_config_message)
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/charge/config", mqttClient, charge_energy_config_message)
 
+def publish_data_to_home_assistant(client, powerData, energyData):
+    is_charging = "ON" if powerData['toBat'] else "ON"
+    battPower = powerData['battPower'] if powerData['toBat'] else 0 - powerData['battPower']
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/soc/state", client, powerData['soc'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/load/state", client, powerData['loadOrEpsPower'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/pvPower/state", client, powerData['pvPower'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/gridPower/state", client, powerData['gridOrMeterPower'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/battPower/state", client, battPower)
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/battCharging/state", client, is_charging)
 
-def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name, unit_of_measurement,
-                            measurement=True):
-    state_class = "measurement" if measurement else "total_increasing"
-    template = f"""
-    {{
-        "unique_id": "sensor.{group_name}-{entity_name}",
-        "name": "Sunsynk {friendly_name}",
-        "state_topic": "homeassistant/{group_name}/{entity_name}",
-        "unit_of_measurement": "{unit_of_measurement}",
-        "device_class": "{device_class}",
-        "state_class": "{state_class}"
-    }}
-    """
-
-    if config.DEBUG_LOGGING:
-        print("Generated MQTT config message:")
-        print(template)
-
-    return template
-
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/pv/state", client, energyData['pv'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/export/state", client, energyData['export'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/import/state", client, energyData['import'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/discharge/state", client, energyData['discharge'])
+    mqtt.publish("homeassistant/sensor/sunsynk-scraper/charge/state", client, energyData['charge'])
 
 def subscribeToSetTopic(mqttClient):
     def on_message(client, userdata, message):
@@ -216,7 +287,7 @@ async def main():
             delete_sensors(mqttClient)
         else:
             print("Publishing MQTT config messages")
-            publish_discovery_messages(mqttClient)
+            # publish_discovery_messages(mqttClient)
             subscribeToSetTopic(mqttClient)
             while True:
                 power_data = get_power_data()
