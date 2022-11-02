@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import time
 
 import requests
@@ -199,6 +200,18 @@ def get_binary_sensor_mqtt_config_message(device_class, group_name, entity_name,
 
 
 def publish_discovery_messages(mqttClient):
+
+    charge_button = {
+        'unique_id': 'button.sunsynk-charge-button',
+        'name': 'Sunsynk Insta-Charge',
+        'state_topic': 'homeassistant/button/sunsynk-scraper/charge-button/state',
+        'payload_press': 'charge', # default from HA is 'PRESS'
+        'command_topic': 'homeassistant/button/sunsynk-scraper/charge-button/commands',
+    }
+
+    mqttClient.publish("homeassistant/button/sunsynk-scraper/charge-button/config", json.dumps(charge_button))
+
+
     soc_config_message = get_mqtt_config_message("battery", "sunsynk-scraper", "soc", "Battery", "%")
     load_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "load", "Load", "W")
     pvPower_config_message = get_mqtt_config_message("power", "sunsynk-scraper", "pvPower", "PV Power", "W")
@@ -248,12 +261,26 @@ def publish_data_to_home_assistant(client, powerData, energyData):
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/discharge/state", client, energyData['discharge'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/charge/state", client, energyData['charge'])
 
-def subscribeToSetTopic(mqttClient):
-    def on_message(client, userdata, message):
-        print("message received ", str(message.payload.decode("utf-8")))
 
-    mqttClient.on_message = on_message
-    mqttClient.subscribe("homeassistant/+/sunsynk-scraper/+/set")
+def handle_charge_button_press():
+    pass
+
+def on_mqtt_command_message_received(client, userdata, message):
+    print("[[ MESSAGE RECEIVED ]] ", str(message.payload.decode("utf-8")))
+    print("[[ TOPIC ]] ", message.topic)
+    # do your logic here for handling the press command
+    # you can use the topic to identify which button was pressed
+    # and then perform the appropriate action
+    button = message.topic.split("/")[-2]
+    print("[[ BUTTON ]] ", button)
+
+    if button == "charge-button":
+        print("Charge button pressed")
+        handle_charge_button_press()
+
+def subscribeToCommandTopics(mqttClient):
+    mqttClient.on_message = on_mqtt_command_message_received
+    mqttClient.subscribe("homeassistant/+/sunsynk-scraper/+/commands")
 
 
 def delete_sensors(mqttClient):
@@ -287,7 +314,7 @@ async def main():
         else:
             print("Publishing MQTT config messages")
             publish_discovery_messages(mqttClient)
-            subscribeToSetTopic(mqttClient)
+            subscribeToCommandTopics(mqttClient)
             while True:
                 power_data = get_power_data()
                 energy_data = get_energy_data()
@@ -299,6 +326,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
-    loop.close()
+    asyncio.run(main())
