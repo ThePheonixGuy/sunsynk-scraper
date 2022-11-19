@@ -246,7 +246,7 @@ def publish_discovery_messages(mqttClient):
     mqtt.publish(f"homeassistant/sensor/sunsynk-scraper/charge/config", mqttClient, charge_energy_config_message, qos=2, retain=True)
 
 def publish_data_to_home_assistant(client, powerData, energyData):
-    is_charging = "ON" if powerData['toBat'] else "ON"
+    is_charging = "ON" if powerData['toBat'] else "OFF"
     battPower = powerData['battPower'] if powerData['toBat'] else 0 - powerData['battPower']
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/soc/state", client, powerData['soc'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/load/state", client, powerData['loadOrEpsPower'])
