@@ -1,7 +1,7 @@
 import datetime
 
 login_endpoint = ('https://pv.inteless.com/oauth/token')
-plant_id_endpoint = ('https://pv.inteless.com/api/v1/plants?page=1&limit=10&name=&status=')
+plants_endpoint = ('https://pv.inteless.com/api/v1/plants?page=1&limit=10&name=&status=')
 
 energy_base_url = "https://pv.inteless.com/api/v1/plant/energy/"
 

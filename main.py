@@ -1,71 +1,31 @@
 import asyncio
 import datetime
 import json
-import time
+import logging
 
-import requests
-
+import configuration
 import configuration as config
 import credentials
 import endpoints
 import mqtt_integration as mqtt
-
-
-def get_headers_and_token():
-    return {
-        'Content-type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': credentials.bearer_token,
-    }
-
-
-def get_bearer_token():
-    headers = {
-        'Content-type': 'application/json',
-        'Accept': 'application/json'
-    }
-
-    payload = {
-        "username": credentials.sunsynk_email,
-        "password": credentials.sunsynk_password,
-        "grant_type": "password",
-        "client_id": "csp-web"
-    }
-    raw_data = requests.post(endpoints.login_endpoint, json=payload, headers=headers).json()
-    # Your access token extracted from response
-    my_access_token = raw_data["data"]["access_token"]
-    return 'Bearer ' + my_access_token
-
-
-# Get plant id and current generation in Watts
-def get_plant_id():
-    r = requests.get(endpoints.plant_id_endpoint, headers=get_headers_and_token())
-    data_response = r.json()
-    plant_id_and_pac = data_response['data']['infos']
-    for d in plant_id_and_pac:
-        print(d)
-        your_plant_id = d['id']
-        print('Your plant id is: ' + str(your_plant_id))
-        print('****************************************************')
-        return your_plant_id
+from request_client import RequestClient
 
 
 # print functions showing token and current generation in Watts
-def get_power_data():
+def get_power_data(client):
     path = endpoints.get_flow_chart_endpoint(credentials.my_plant_id, datetime.date.today())
-
-    r = requests.get(path, headers=get_headers_and_token())
+    r = client.get(path)
     data_response = r.json()
     power_data = data_response['data']
 
-    print(
+    logging.info(
         f"Got data: SOC: {power_data['soc']}%, Load: {power_data['loadOrEpsPower']}W, PV: {power_data['pvPower']}W, Grid: {power_data['gridOrMeterPower']}W, Charge/Discharge: {power_data['battPower']}W")
     return power_data
 
 
-def get_energy_data():
+def get_energy_data(client):
     path = endpoints.get_month_readings_endpoint(credentials.my_plant_id, datetime.date.today())
-    r = requests.get(path, headers=get_headers_and_token())
+    r = client.get(path)
     data_response = r.json()
 
     energy_data = data_response['data']['infos']
@@ -91,7 +51,7 @@ def get_energy_data():
     charge_kwh_readings = find_data_stream_for_label("Charge", energy_data)
     latest_charge_kwh_reading = get_latest_kwh_reading(charge_kwh_readings)
 
-    print(
+    logging.info(
         f"Got Latest kWh readings: PV: {latest_pv_kwh_reading}kWh, Export: {latest_export_kwh_reading}kWh, Import: {latest_import_kwh_reading}kWh, Discharge: {latest_discharge_kwh_reading}kWh, Charge: {latest_charge_kwh_reading}kWh")
     return {
         "pv": latest_pv_kwh_reading,
@@ -176,8 +136,8 @@ def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name
     """
 
     if config.DEBUG_LOGGING:
-        print("Generated MQTT config message:")
-        print(template)
+        logging.info("Generated MQTT config message:")
+        logging.info(template)
 
     return template
 
@@ -193,8 +153,8 @@ def get_binary_sensor_mqtt_config_message(device_class, group_name, entity_name,
     """
 
     if config.DEBUG_LOGGING:
-        print("Generated MQTT config message:")
-        print(template)
+        logging.info("Generated MQTT config message:")
+        logging.info(template)
 
     return template
 
@@ -266,16 +226,16 @@ def handle_charge_button_press():
     pass
 
 def on_mqtt_command_message_received(client, userdata, message):
-    print("[[ MESSAGE RECEIVED ]] ", str(message.payload.decode("utf-8")))
-    print("[[ TOPIC ]] ", message.topic)
+    logging.info("[[ MESSAGE RECEIVED ]] ", str(message.payload.decode("utf-8")))
+    logging.info("[[ TOPIC ]] ", message.topic)
     # do your logic here for handling the press command
     # you can use the topic to identify which button was pressed
     # and then perform the appropriate action
     button = message.topic.split("/")[-2]
-    print("[[ BUTTON ]] ", button)
+    logging.info("[[ BUTTON ]] ", button)
 
     if button == "charge-button":
-        print("Charge button pressed")
+        logging.info("Charge button pressed")
         handle_charge_button_press()
 
 def subscribeToCommandTopics(mqttClient):
@@ -290,39 +250,35 @@ def delete_sensors(mqttClient):
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/gridPower/config", mqttClient, "")
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/battPower/config", mqttClient, "")
 
-
-def login_and_setup_plant():
-    credentials.bearer_token = get_bearer_token()
-    credentials.my_plant_id = get_plant_id()
-
-
 async def setup_mqtt():
     mqttClient = await mqtt.connect_client()
     return mqttClient
 
 
+def setup_logging():
+    loglevel = logging.DEBUG if configuration.DEBUG_LOGGING else logging.INFO
+    logging.basicConfig(level=loglevel, format='%(asctime)s | %(levelname)s | %(message)s')
+
+
 async def main():
-    print("Startup")
+    setup_logging()
+    logging.info("Startup")
     delete = False
-    login_and_setup_plant()
-    print("Plant retrieval successful")
-    try:
-        mqttClient = await setup_mqtt()
-        print("MQTT setup successful")
-        if delete:
-            delete_sensors(mqttClient)
-        else:
-            print("Publishing MQTT config messages")
-            publish_discovery_messages(mqttClient)
-            subscribeToCommandTopics(mqttClient)
-            while True:
-                power_data = get_power_data()
-                energy_data = get_energy_data()
-                publish_data_to_home_assistant(mqttClient, power_data, energy_data)
-                print("Published data to Home Assistant")
-                await asyncio.sleep(config.API_REFRESH_TIMEOUT)
-    except Exception as e:
-        print(f"Failed to connect to MQTT broker with reason {str(e)}")
+    request_client = RequestClient()
+    mqttClient = await setup_mqtt()
+    logging.info("MQTT setup successful")
+    if delete:
+        delete_sensors(mqttClient)
+    else:
+        logging.info("Publishing MQTT config messages")
+        publish_discovery_messages(mqttClient)
+        subscribeToCommandTopics(mqttClient)
+        while True:
+            power_data = get_power_data(request_client)
+            energy_data = get_energy_data(request_client)
+            publish_data_to_home_assistant(mqttClient, power_data, energy_data)
+            logging.info("Published data to Home Assistant")
+            await asyncio.sleep(config.API_REFRESH_TIMEOUT)
 
 
 if __name__ == "__main__":
