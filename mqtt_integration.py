@@ -14,13 +14,13 @@ def on_connect(client, userdata, flags, rc):
     if rc == 0:
         logging.info("Connected to MQTT Broker!")
     else:
-        logging.info("Failed to connect, return code %d\n", rc)
+        logging.error("Failed to connect, return code %d\n", rc)
         raise Exception("Failed to connect to MQTT broker")
 
 
 def on_publish_callback(client, userdata, mid):
     if configuration.DEBUG_LOGGING:
-        logging.info(f"Published: {mid}")
+        logging.debug(f"Published: {mid}")
 
 
 async def connect_client():
@@ -54,6 +54,6 @@ def publish(topic, client, msg, qos = 0, retain = False):
     status = result[0]
     if configuration.DEBUG_LOGGING:
         if status == 0 and configuration.DEBUG_LOGGING:
-            logging.info(f"Sent message `{msg}` to topic `{topic}`")
+            logging.debug(f"Sent message `{msg}` to topic `{topic}`")
         else:
-            logging.info(f"Failed to send message `{msg}` to topic {topic}")
+            logging.debug(f"Failed to send message `{msg}` to topic {topic}")

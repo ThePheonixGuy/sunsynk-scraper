@@ -1,6 +1,9 @@
+import datetime
+import json
 import logging
 
 import requests
+
 import credentials
 import endpoints
 
@@ -55,7 +58,7 @@ class RequestClient():
 
     def get(self, path, is_retry=False):
         headers = self.get_headers_and_token()
-        response = requests.get(path, headers= headers)
+        response = requests.get(path, headers=headers)
 
         if response.ok:
             return response
@@ -68,3 +71,61 @@ class RequestClient():
         logging.error("Request failed: " + str(response.status_code) + " with reason: " + response.text)
         raise Exception("Request failed: " + str(response.status_code))
 
+    def get_monthly_readings(self):
+        path = endpoints.get_month_readings_endpoint(credentials.my_plant_id, datetime.date.today())
+        response = self.get(path)
+        return response.json()
+
+    def get_power_readings(self):
+        path = endpoints.get_flow_chart_endpoint(credentials.my_plant_id, datetime.date.today())
+        response = self.get(path)
+        return response.json()
+
+
+class DataIngestService():
+    def __init__(self):
+        self._client = RequestClient()
+
+    def get_power_data(self):
+        response = self._client.get_power_readings()
+        power_data = response['data']
+
+        logging.debug(f"Got power data: {json.dumps(power_data, indent=2)}")
+
+        return power_data
+
+    def get_energy_data(self):
+        data_response = self._client.get_monthly_readings()
+
+        energy_data = data_response['data']['infos']
+
+        results = {
+            "pv": self.get_latest_reading_for_label("PV", energy_data),
+            "export": self.get_latest_reading_for_label("Export", energy_data),
+            "import": self.get_latest_reading_for_label("Import", energy_data),
+            "discharge": self.get_latest_reading_for_label("Dis Charge", energy_data),
+            "charge": self.get_latest_reading_for_label("Charge", energy_data)
+        }
+
+        logging.debug(f"Got energy data: {json.dumps(results, indent=2)}")
+        return results
+
+    def get_latest_reading_for_label(self, label, energy_data):
+        readings = self.find_data_stream_for_label(label, energy_data)
+        latest_reading = self.get_latest_kwh_reading(readings)
+        return latest_reading
+
+    def get_latest_kwh_reading(self, readings):
+        results = [reading['value'] for reading in readings['records'] if
+                   reading['time'] == datetime.date.today().strftime("%Y-%m-%d")]
+        if len(results) == 0:
+            raise IOError(f"Could not find a latest reading")
+
+        return results[0]
+
+    def find_data_stream_for_label(self, label, energy_data):
+        results = [data for data in energy_data if data['label'] == label]
+        if len(results) == 0:
+            raise IOError(f"Could not find a data stream for label {label}")
+
+        return results[0]
