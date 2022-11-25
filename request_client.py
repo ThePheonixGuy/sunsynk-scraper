@@ -1,9 +1,7 @@
 import datetime
 import json
 import logging
-
 import requests
-
 import credentials
 import endpoints
 

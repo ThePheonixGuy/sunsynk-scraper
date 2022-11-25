@@ -1,6 +1,4 @@
 import json
-import logging
-
 import configuration
 import mqtt_integration as mqtt
 
