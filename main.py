@@ -66,7 +66,7 @@ def generate_sensors():
         EnergySensor("Sunsynk Charge Energy", "charge", "charge")
     ]
 
-    runtime_sensor = RuntimeSensor("Sunsynk Battery Estimated Runtime", "runtime", "runtime")
+    runtime_sensor = RuntimeSensor("Battery Estimated Runtime", "runtime", "runtime")
 
     charging_sensor = BinarySensor("Sunsynk Battery Charging Status", "battCharging", "toBat", "power")
 
