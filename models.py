@@ -98,13 +98,18 @@ class Sensor(Entity):
         self.config_topic = f"{self.base_topic}/config"
 
     def get_config(self):
-        return json.dumps({
+        res = {
             "unique_id": self.unique_id,
             "name": self.name,
             "state_topic": self.state_topic,
             "unit_of_measurement": self.unit_of_measurement,
             "device_class": self.device_class
-        })
+        }
+
+        if self.icon:
+            res["icon"] = self.icon
+
+        return json.dumps(res)
 
     def publish_discovery_message(self, mqttClient):
         mqtt.publish(self.config_topic, mqttClient, self.get_config(), qos=2, retain=True)
@@ -153,6 +158,7 @@ class BatterySensor(StatisticsSensor):
 class RuntimeSensor(Sensor):
     def __init__(self, friendly_name, entity_name, key):
         super().__init__(friendly_name, entity_name, key, "h", "duration")
+        self.icon = "mdi:timer-outline"
 
     def get_state(self, data):
         house_load = int(data["loadOrEpsPower"])
