@@ -1,6 +1,9 @@
 import json
 import logging
 
+import configuration
+import mqtt_integration as mqtt
+
 
 class Device():
     device: str
@@ -73,12 +76,17 @@ class BinarySensor(Entity):
             "unique_id": self.unique_id,
             "name": self.name,
             "state_topic": self.state_topic,
-            "unit_of_measurement": self.unit_of_measurement,
             "device_class": self.device_class
         })
 
     def get_state(self, data):
         return "ON" if data[self.key] else "OFF"
+
+    def publish_discovery_message(self, mqttClient):
+        mqtt.publish(self.config_topic, mqttClient, self.get_config(), qos=2, retain=True)
+
+    def publish_state(self, mqttClient, data):
+        mqtt.publish(self.state_topic, mqttClient, self.get_state(data), retain=True)
 
 
 class Sensor(Entity):
@@ -99,6 +107,12 @@ class Sensor(Entity):
             "unit_of_measurement": self.unit_of_measurement,
             "device_class": self.device_class
         })
+
+    def publish_discovery_message(self, mqttClient):
+        mqtt.publish(self.config_topic, mqttClient, self.get_config(), qos=2, retain=True)
+
+    def publish_state(self, mqttClient, data):
+        mqtt.publish(self.state_topic, mqttClient, self.get_state(data), retain=True)
 
 
 class StatisticsSensor(Sensor):
@@ -143,5 +157,14 @@ class RuntimeSensor(Sensor):
         super().__init__(friendly_name, entity_name, key, "h", "duration")
 
     def get_state(self, data):
-        logging.info("got data %s", json.dumps(data, indent=2))
-        # TODO implement power switch logic to determine what load we are considering here
+        house_load = int(data["loadOrEpsPower"])
+        batt_load = data['battPower']
+        soc = data['soc']
+        charging = True if data['toBat'] else False
+
+        if not charging and abs(batt_load) > 75:
+            runtime = (soc - 15) / ((abs(batt_load) /100)  * configuration.BATTERY_DISCHARGE_RATE)
+        else:
+            runtime = (soc - 15) / ((abs(house_load) /100)  * configuration.BATTERY_DISCHARGE_RATE)
+
+        return runtime

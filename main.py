@@ -1,17 +1,12 @@
 import asyncio
-import datetime
 import json
 import logging
 
 import configuration
 import configuration as config
-import credentials
-import endpoints
-import models
 import mqtt_integration as mqtt
-from request_client import RequestClient, DataIngestService
-
 from models import RuntimeSensor, PowerSensor, BatterySensor, EnergySensor, BinarySensor
+from request_client import DataIngestService
 
 
 def get_mqtt_config_message(device_class, group_name, entity_name, friendly_name, unit_of_measurement,
@@ -110,7 +105,8 @@ def publish_discovery_messages(mqttClient):
 
 def publish_data_to_home_assistant(client, powerData, energyData):
     is_charging = "ON" if powerData['toBat'] else "OFF"
-    battPower = powerData['battPower'] if powerData['toBat'] else 0 - powerData['battPower']
+    battPowerRaw = abs(powerData['toBat'])
+    battPower = battPowerRaw if battPowerRaw else 0 - battPowerRaw
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/soc/state", client, powerData['soc'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/load/state", client, powerData['loadOrEpsPower'])
     mqtt.publish("homeassistant/sensor/sunsynk-scraper/pvPower/state", client, powerData['pvPower'])
@@ -171,26 +167,44 @@ def generate_sensors():
 
     power_sensors = [
         PowerSensor("Sunsynk Load", "load", "loadOrEpsPower"),
-        PowerSensor("Sunsynk PV", "pvPower", "pvPower"),
-        PowerSensor("Sunsynk Grid", "gridPower", "gridOrMeterPower"),
+        PowerSensor("Sunsynk PV Power", "pvPower", "pvPower"),
+        PowerSensor("Sunsynk Grid Power", "gridPower", "gridOrMeterPower"),
         PowerSensor("Sunsynk Battery Power", "battPower", "battPower",
-                           lambda power_data: power_data['battPower'] if power_data['toBat'] else 0 - power_data[
-                               'battPower'])
+                    lambda data: abs(data['battPower']) if data['toBat'] else 0 - abs(data['battPower']))
     ]
 
     energy_sensors = [
-        EnergySensor("Sunsynk PV", "pv", "pv"),
-        EnergySensor("Sunsynk Export", "export", "export"),
-        EnergySensor("Sunsynk Import", "import", "import"),
-        EnergySensor("Sunsynk Discharge", "discharge", "discharge"),
-        EnergySensor("Sunsynk Charge", "charge", "charge")
+        EnergySensor("Sunsynk PV Energy", "pv", "pv"),
+        EnergySensor("Sunsynk Export Energy", "export", "export"),
+        EnergySensor("Sunsynk Import Energy", "import", "import"),
+        EnergySensor("Sunsynk Discharge Energy", "discharge", "discharge"),
+        EnergySensor("Sunsynk Charge Energy", "charge", "charge")
     ]
 
-    runtime_sensor = RuntimeSensor("Runtime", "runtime", "runtime")
+    runtime_sensor = RuntimeSensor("Sunsynk Battery Estimated Runtime", "runtime", "runtime")
 
-    charging_sensor = BinarySensor("Battery Charging Status", "battCharging", "toBat", "power")
+    charging_sensor = BinarySensor("Sunsynk Battery Charging Status", "battCharging", "toBat", "power")
 
     return battery_soc_sensor, power_sensors, energy_sensors, runtime_sensor, charging_sensor
+
+
+def publish_discovery_messages_v2(mqttClient, sensors):
+    for sensor in sensors:
+        if isinstance(sensor, list):
+            for s in sensor:
+                s.publish_discovery_message(mqttClient)
+        else:
+            sensor.publish_discovery_message(mqttClient)
+
+
+def publish_state_updates(mqttClient, energy_data, power_data, sensors):
+    data = energy_data | power_data
+    for sensor in sensors:
+        if isinstance(sensor, list):
+            for s in sensor:
+                s.publish_state(mqttClient, data)
+        else:
+            sensor.publish_state(mqttClient, data)
 
 
 async def main():
@@ -202,28 +216,28 @@ async def main():
         mqttClient = await setup_mqtt()
         logging.info("MQTT setup successful")
 
-        (battery_soc_sensor,
-         power_sensors,
-         energy_sensors,
-         runtimes_sensor,
-         charging_sensor) = generate_sensors()
+        sensors = generate_sensors()
 
         if delete:
             delete_sensors(mqttClient)
         else:
             logging.info("Publishing MQTT config messages")
-            publish_discovery_messages(mqttClient)
+            publish_discovery_messages_v2(mqttClient, sensors)
             subscribeToCommandTopics(mqttClient)
             while True:
-                power_data = data_ingest_service.get_power_data()
-                energy_data = data_ingest_service.get_energy_data()
-                publish_data_to_home_assistant(mqttClient, power_data, energy_data)
+                try:
+                    power_data = data_ingest_service.get_power_data()
+                    energy_data = data_ingest_service.get_energy_data()
+                except Exception as e:
+                    logging.error("Error getting data from Sunsynk API: " + str(e))
+                    continue
+                publish_state_updates(mqttClient, energy_data, power_data, sensors)
                 logging.info("Published data to Home Assistant")
                 await asyncio.sleep(config.API_REFRESH_TIMEOUT)
     except Exception as e:
-        logging.error("Error occurred: ", e)
+        logging.error("Error occurred: ", e, exc_info=True)
     finally:
-        await main()
+        logging.info("Shutting down due to an error")
 
 
 if __name__ == "__main__":
